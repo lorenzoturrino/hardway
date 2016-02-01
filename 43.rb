@@ -1,146 +1,153 @@
-class Engine
+class Riddle															#data and logic for the riddle
 
-	def initialize(first_room="entrance",player_name="Nameless")
-		@player_name = player_name
-		@first_room = first_room
-		introduction
+	def initialize(text="default riddle",sol="default solution",hint="default hint")
+		@riddle_text = text
+		@riddle_solution = sol
+		@riddle_hint = hint
 	end
 	
-	def introduction
-		puts "hello #{@player_name}, get ready to enter the #{@first_room}"
-	end
-	
-	def game
-		playfield = Scene.new
+	def solve
+		puts "the text reads as follows:"
+		puts @riddle_text
+		puts "write 'hint' to get an hint, or put the solution directly"
+		player_sol = $stdin.gets.chomp
 		
-		next_room = playfield.enter_room("entrance")
-		while(true)																																								#dovrà ricevere next/lose, pescare next o winda mappa					
-			case next_room
-				when "lose" then lose
-				when "win" then win
-				else next_room = playfield.enter_room(next_room)
-			end
+		if player_sol == "hint"
+			puts @riddle_hint, "\nnowplease state your answer"
+			player_sol = $stdin.gets.chomp
 		end
 		
-	end
-	
-	def win
-		puts "you win, gratz"
-		exit(0)
-	end
-	
-	def lose
-		puts "you lose, bye"
-		exit(1)
-	end
-end
-
-
-class StarshipMap																									#struttura delle rooms e contenuti
-	
-
-end
-
-
-class Room																												#gens random rooms
-	
-	attr_accessor :monster_list
-	attr_accessor :monster_number
-	
-	def initialize
-		puts "initalizing monsters and riddles"
-		seed_obstacles
-		puts "we have #{@monster_number}: #{@monster_list}"
-	end
-	
-	def seed_obstacles																							#n of monsters and maybe a riddle
-		@monster_number = rand(4)
-		if @monster_number == 0
-			@riddle = rand > 0.5 ? true : false
+		if player_sol == @riddle_solution
+			true
 		else
-			monster_setup
+			false
+		end
+	end
+			
+	def tester
+		puts "Hi, this is a dump"
+		p self
+	end
+end
+
+
+class Monster															#data and logic for the monster
+	
+	def initialize(hp=0,atk=0)
+		if hp == 0
+			@monster_hp = rand(40)+10
+			@monster_atk = rand(20)+5
+		else
+			@monster_hp = hp
+			@monster_atk = atk	
+		end
+	end
+	
+	def slay
+		puts "press enter to attack!"
+		$stdin.gets.chomp
+		puts "with a swift kick, you deal #{@monster_hp} damage and slay the monster. How convenient!\n"
+		true
+	end
+	
+	def tester
+		puts "Hi, this is a dump"
+		p self
+	end	
+end
+
+
+class Ship																#contains the various rooms
+	
+	attr_accessor :ship_size
+	attr_accessor :rooms
+	
+	def initialize(size=rand(4)+2)
+		@ship_size = size
+		@rooms = Array.new()
+		size.times {@rooms.push(Room.new)}
+	end
+	
+	def tester
+		puts "Hi, this is a dump"
+		p self
+	end	
+	
+end
+
+
+class Room																#contains inf on the room and gameplay
+	
+	def pick_description
+		description_list = ["This is a green room",
+				"It's very dark in here",
+				"You feel something's wrong in this room ",
+				"This is like the best room ever",
+				"This is a dark green room",
+				"This room is different from all others",
+		]
+		description_list.sample
+	end
+
+	def initialize
+		@room_description = pick_description
+		@monster_list = Array.new()
+		rand(4).times {@monster_list.push(Monster.new)}
+		
+		if @monster_list.size == 0
+			@riddle = Riddle.new("this is a riddle","cake","the solution is 'cake'")
+		else
 			@riddle = false
 		end
 	end
-	
-	def monster_setup
-		@monster_list = []
-		@monster_number.times {@monster_list.push(Monster.new)}				#array of monster object each with hp/atk
-	end
 
+	def enter
+		puts "\n\n\nYou enter a new room"	
+		puts @room_description
+		if @monster_list.length > 0
+			puts "there are #{@monster_list.length} monsters in here!"
+			@monster_list.each_with_index do |v,i|
+				puts "get ready to fight monster n.#{i+1}"
+				unless v.slay
+					return false
+				end
+			end
+			puts "\n\nCongratulations, you just killed all the monsters in this room"
+		else
+			puts "there are no monsters here, but you must solve something"
+			unless @riddle.solve
+				return false
+			end
+			puts "\n\nCongratulations, you solved the enigma"
+		end
+		true
+	end
+	
 	def tester
-		puts "we #{@monster_number}"
+		puts "Hi, this is a dump"
+		p self
+	end	
+end
+
+def lose
+	puts "\n\nI'm sorry you managed to lose the game. gg."
+	exit(1)
+end
+
+def game																						#cycle through the scenes, check status
+	puts "Welcome to the playtest. the progression is linear and you can't lose from monsters. there is also no special first/last room, but everything _should_ work"
+	level = Ship.new()
+	puts "The ship you're about to board has #{level.ship_size} rooms and your goal is to clear them all. Good luck!"
+	
+	level.rooms.each do |room|
+		unless room.enter
+			lose
+		end
 	end
+	
+	puts "\n\n\nYou cleared all rooms, and got to the central command post. you blow it up or something, and you win!"
+	exit(0)
 end
 
 
-class Monster																										#stats of the monster
-
-	attr_accessor :monster_hp
-	attr_accessor :monster_atk
-	
-	def initialize(monster_hp=0,monster_atk=0)
-		@monster_hp = monster_hp == 0 ? rand(50) : monster_hp
-		@monster_atk = monster_atk == 0 ? rand(10) : monster_atk
-	end
-
-end
-
-
-class Riddle																										#puzzle to solve
-
-	def run
-		"\n\nRiddle:on a scale from one to ten, you are a nine."
-		"sometime i'll put a puzzle here, now you get a pass"
-		true
-	end
-	
-end
-
-
-class Scene																									#room logic
-	
-	def initialize
-		@rooms = {																									#da spostare nella mappa
-			"entrance" => "this is the entrance" ,
-			"main_room" =>  "this is the main room" ,
-			"exit" => "this is the exit"
-		}
-	end
-	
-	def enter_room(room_name)																									#stub. dovrà leggere le info delle stanze
-		puts "\n\nyou enter a new room: #{@rooms[room_name]}"
-		puts "now going to combat mode"
-		
-		battaglia = Combat.new
-		battaglia.fight ? "main_room" : "lose"																								#ritornerà next_room/lose
-	end
-	
-end
-
-class Combat
-
-	def initialize(monster_hp=50, player_hp=100)
-		@monster_hp = monster_hp
-		@player_hp = player_hp
-		puts "a big monster appears!"
-	end
-
-	def fight()																									#implementare combat
-		puts "you face the enemy, press enter to win!"
-		$stdin.gets.chomp
-		puts "you win"
-		true
-	end
-	
-end
-
-stanza = Room.new
-puts "\n\n-----"
-stanza.monster_list.each {|monster| puts "monster has #{monster.monster_atk}atk and #{monster.monster_hp}hp"}
-
-
-=begin
-ciao = Engine.new
-ciao.game
-=end
+game
